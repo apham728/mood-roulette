@@ -56,8 +56,9 @@ function App() {
         {messages.map((message) => (
           <article key={message.id}>
             <strong>{message.sender}</strong>
+            <span>{message.tone}</span>
             <p>{message.content}</p>
-            <small>{message.tone}</small>
+            <small>{new Date(message.createdAt).toLocaleTimeString()}</small>
           </article>
         ))}
       </section>
