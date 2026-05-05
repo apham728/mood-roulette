@@ -1,3 +1,6 @@
+const { PrismaClient } = require("@prisma/client");
+const prisma = new PrismaClient();
+
 const express = require("express");
 const http = require("http");
 const cors = require("cors");
@@ -22,28 +25,35 @@ const io = new Server(server, {
     },
 });
 
-io.on("connection", (socket) => {
+io.on("connection", async (socket) => {
     console.log("User connected:", socket.id);
 
-    // RANDOM MESSAGE TONE SELECTION
-    const tones = ["Professional", "Passive Aggressive", "Shakespearean", "Unhinged"];
-
-    socket.on("chat:send", (message) => {
-        const tone = tones[Math.floor(Math.random() * tones.length)];
-
-        io.emit("chat:message", {
-            id: crypto.randomUUID(),
-            sender: message.sender || "Anonymous",
-            content: message.content,
-            tone,
-            createdAt: new Date().toISOString(),
-        });
+    const recentMessages = await prisma.message.findMany({
+        orderBy: { createdAt: "desc" },
+        take: 100,
     });
 
+    socket.emit("chat:history", recentMessages.reverse());
+  
+    socket.on("chat:send", async (message) => {
+        const tones = ["Professional", "Passive Aggressive", "Shakespearean", "Unhinged"];
+        const tone = tones[Math.floor(Math.random() * tones.length)];
+  
+        const savedMessage = await prisma.message.create({
+            data: {
+                sender: message.sender || "Anonymous",
+                content: message.content,
+                tone,
+            },
+        });
+  
+      io.emit("chat:message", savedMessage);
+    });
+  
     socket.on("disconnect", () => {
         console.log("User disconnected:", socket.id);
-    });
-});
+        });
+    });  
 
 server.listen(PORT, () => {
     console.log(`Server running on http://localhost:${PORT}`);
