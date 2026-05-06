@@ -143,6 +143,11 @@ input:focus {
   border-color: rgba(189, 107, 34, 0.5);
 }
 
+input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .primary-button {
   background: linear-gradient(135deg, #332216 0%, #7e4424 100%);
   color: #fff7ec;
@@ -150,8 +155,8 @@ input:focus {
 }
 
 .primary-button:disabled {
-  opacity: 0.7;
-  cursor: wait;
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .secondary-button {
@@ -237,6 +242,24 @@ input:focus {
 .chat-form {
   padding: 0 28px 28px;
   grid-template-columns: 1fr auto;
+}
+
+.chat-input-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.rewriting-indicator {
+  font-size: 0.82rem;
+  color: #a89880;
+  padding-left: 4px;
+}
+
+.send-error {
+  font-size: 0.82rem;
+  color: #a12e23;
+  padding-left: 4px;
 }
 
 @media (max-width: 700px) {

@@ -17,6 +17,8 @@ function App() {
   const [content, setContent] = useState("");
   const [messages, setMessages] = useState([]);
   const [socket, setSocket] = useState(null);
+  const [isRewriting, setIsRewriting] = useState(false);
+  const [sendError, setSendError] = useState("");
   const messagesEndRef = useRef(null);
 
   // on first page load, try to restore a previous session from local storage
@@ -79,13 +81,29 @@ function App() {
 
     // append every newly broadcast message so the room stays live across tabs
     nextSocket.on("chat:message", (message) => {
+      setIsRewriting(false);
+      setSendError("");
       setMessages((currentMessages) => [...currentMessages, message]);
+    });
+
+    // show a rewriting indicator while the backend AI call is in flight
+    nextSocket.on("chat:pending", () => {
+      setIsRewriting(true);
+      setSendError("");
+    });
+
+    // surface delivery failures to the sender without crashing the UI
+    nextSocket.on("chat:error", ({ message }) => {
+      setIsRewriting(false);
+      setSendError(message);
     });
 
     // clean up listeners and disconnect the socket when the user logs out
     return () => {
       nextSocket.off("chat:history");
       nextSocket.off("chat:message");
+      nextSocket.off("chat:pending");
+      nextSocket.off("chat:error");
       nextSocket.disconnect();
       setSocket(null);
     };
@@ -99,7 +117,7 @@ function App() {
     const behavior = isInitialHistoryLoad.current ? "smooth" : "instant";
     isInitialHistoryLoad.current = true;
     messagesEndRef.current?.scrollIntoView({ behavior });
-}, [messages]);
+  }, [messages]);
 
   // leep the auth form controlled by React state so signup and login can
   // share the same username and password inputs
@@ -151,6 +169,8 @@ function App() {
     setMessages([]);
     setContent("");
     setAuthError("");
+    setSendError("");
+    setIsRewriting(false);
   }
 
   // send a chat message to the backend
@@ -158,13 +178,14 @@ function App() {
   function handleSubmit(event) {
     event.preventDefault();
 
-    if (!content.trim() || !user || !socket) return;
+    if (!content.trim() || !user || !socket || isRewriting) return;
 
     socket.emit("chat:send", {
       content,
     });
 
     setContent("");
+    setSendError("");
   }
 
   // loading state while checking for an existing session
@@ -300,12 +321,17 @@ function App() {
         </section>
 
         <form className="chat-form" onSubmit={handleSubmit}>
-          <input
-            value={content}
-            onChange={(event) => setContent(event.target.value)}
-            placeholder="Type a message..."
-          />
-          <button type="submit" className="primary-button">
+          <div className="chat-input-wrapper">
+            <input
+              value={content}
+              onChange={(event) => setContent(event.target.value)}
+              placeholder="Type a message..."
+              disabled={isRewriting}
+            />
+            {isRewriting && <span className="rewriting-indicator">rewriting...</span>}
+            {sendError && <span className="send-error">{sendError}</span>}
+          </div>
+          <button type="submit" className="primary-button" disabled={isRewriting}>
             Send
           </button>
         </form>
