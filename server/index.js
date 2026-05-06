@@ -26,19 +26,26 @@ const io = new Server(server, {
 });
 
 io.on("connection", async (socket) => {
+    // client connects
     console.log("User connected:", socket.id);
 
+    // query database for the last 100 messages 
     const recentMessages = await prisma.message.findMany({
         orderBy: { createdAt: "desc" },
         take: 100,
     });
 
+    // reverse recentMessages since it grabbed by most recent and
+    // we want the chat history to be oldest --> most recent
     socket.emit("chat:history", recentMessages.reverse());
   
+    
     socket.on("chat:send", async (message) => {
+        // select random message mood/tone 
         const tones = ["Professional", "Passive Aggressive", "Shakespearean", "Unhinged"];
         const tone = tones[Math.floor(Math.random() * tones.length)];
-  
+        
+        // saves sent message from to PostgreSQL through Prisma
         const savedMessage = await prisma.message.create({
             data: {
                 sender: message.sender || "Anonymous",
@@ -47,6 +54,7 @@ io.on("connection", async (socket) => {
             },
         });
   
+      // sends new saved message to every connected client 
       io.emit("chat:message", savedMessage);
     });
   

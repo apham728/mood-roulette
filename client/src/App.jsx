@@ -10,11 +10,21 @@ function App() {
   const [messages, setMessages] = useState([]);
 
   useEffect(() => {
+    // when socket connects, receive last 100 messages from backend
+    // frontend stores and displays the chat history
+    socket.on("chat:history", (history) => {
+      setMessages(history);
+    });
+
+    // live chat updates
+    // backend receives sent message and broadcasts to all connected clients
+    // frontend adds received message to React state and displays
     socket.on("chat:message", (message) => {
       setMessages((currentMessages) => [...currentMessages, message]);
     });
 
     return () => {
+      socket.off("chat:history");
       socket.off("chat:message");
     };
   }, []);
@@ -24,6 +34,8 @@ function App() {
 
     if (!content.trim()) return;
 
+    // when send button/form is submitted, send message information to backend
+    // backend chooses tone and saves to database
     socket.emit("chat:send", {
       sender,
       content,
