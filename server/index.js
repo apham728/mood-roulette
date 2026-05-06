@@ -19,6 +19,9 @@ const app = express();
 app.use(cors({ origin: "http://localhost:5173" }));
 app.use(express.json());
 
+// create the signed JWT that frontend stores after sign up/login
+// token will carry minimum identity needed to prove themselves for 
+// future requests and socket connections to work
 function createToken(user) {
     return jwt.sign(
       { userId: user.id, username: user.username },
@@ -27,6 +30,9 @@ function createToken(user) {
     );
 }
   
+// take raw token string out of the authentication header: "Header "
+// if the header isn't matching to expected value, we treat the request
+// as unauthenticated
 function getBearerToken(headerValue = "") {
     if (!headerValue.startsWith("Bearer ")) {
       return null;
@@ -35,6 +41,7 @@ function getBearerToken(headerValue = "") {
     return headerValue.slice(7);
 }
   
+// verifies JWT and loads matching user from database
 async function requireAuth(req, res, next) {
     const token = getBearerToken(req.headers.authorization);
   
@@ -73,6 +80,8 @@ const io = new Server(server, {
     },
 });
 
+// create a new account, hash password before storing in database
+// and return a JWT for frontend to treat sign up as authenticated session
 app.post("/auth/signup", async (req, res) => {
     const username = req.body.username?.trim();
     const password = req.body.password;
@@ -110,6 +119,8 @@ app.post("/auth/signup", async (req, res) => {
     });
 });
   
+// log into existing user by comparing submitted password against 
+// stored password hash
 app.post("/auth/login", async (req, res) => {
     const username = req.body.username?.trim();
     const password = req.body.password;
@@ -142,6 +153,9 @@ app.post("/auth/login", async (req, res) => {
     });
 });
   
+// restores session upon page refresh
+// frontend sends stored token here to confirm currently logged
+// in user without needing user to reenter credentials
 app.get("/auth/me", requireAuth, (req, res) => {
     res.json({ user: req.user });
 });  
