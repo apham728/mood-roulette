@@ -1,3 +1,5 @@
+// npm run dev
+
 import { useEffect, useState } from "react";
 import { io } from "socket.io-client";
 import "./App.css";
@@ -70,7 +72,13 @@ function App() {
             <strong>{message.sender}</strong>
             <span>{message.tone}</span>
             <p>{message.content}</p>
-            <small>{new Date(message.createdAt).toLocaleTimeString()}</small>
+            <small>
+              {new Date(message.createdAt).toLocaleDateString()}{" "}
+              {new Date(message.createdAt).toLocaleTimeString([], {
+                hour: "numeric",
+                minute: "2-digit",
+              })}
+            </small>
           </article>
         ))}
       </section>
