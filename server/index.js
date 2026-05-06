@@ -134,13 +134,13 @@ app.post("/auth/login", async (req, res) => {
     });
   
     if (!user) {
-      return res.status(401).json({ error: "Invalid username or password." });
+      return res.status(401).json({ error: "Login failed. Check your username and password." });
     }
   
     const passwordMatches = await bcrypt.compare(password, user.passwordHash);
   
     if (!passwordMatches) {
-      return res.status(401).json({ error: "Invalid username or password." });
+      return res.status(401).json({ error: "Login failed. Check your username and password." });
     }
   
     return res.json({
