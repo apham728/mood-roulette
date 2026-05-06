@@ -2,8 +2,8 @@ import { useEffect, useState } from "react";
 import { io } from "socket.io-client";
 import "./App.css";
 
-// config for backend url and browser storage key
-// use to persist logged in session between refreshes
+// frontend config for the backend URL and the browser storage key
+// persist a logged-in session between page refreshes
 const API_BASE_URL = "http://localhost:3001";
 const TOKEN_STORAGE_KEY = "mood-roulette-token";
 
@@ -18,9 +18,9 @@ function App() {
   const [messages, setMessages] = useState([]);
   const [socket, setSocket] = useState(null);
 
-// on inital page refresh, try to restore previous session 
-// if token exists, check with backend on who current uesr is before
-// loading chat ui
+// on first page load, try to restore a previous session from local storage
+// if a token exists, confirm with the backend which user is currently logged in
+// before rendering the chat UI
   useEffect(() => {
     const storedToken = localStorage.getItem(TOKEN_STORAGE_KEY);
 
@@ -29,8 +29,8 @@ function App() {
       return;
     }
 
-    // validate saved token with /auth/me so that frontend only restores
-    // sessions that backend verifies
+    // validate the saved token with /auth/me so the frontend only restores
+    // sessions that the backend still considers valid
     async function restoreSession() {
       try {
         const response = await fetch(`${API_BASE_URL}/auth/me`, {
@@ -55,8 +55,8 @@ function App() {
     restoreSession();
   }, []);
 
-// open single live connection for the chat's message history 
-// and real time message updates 
+// open a single live socket connection for chat history and real-time
+// message updates once the user is authenticated
   useEffect(() => {
     if (!user) {
       return undefined;
@@ -65,17 +65,17 @@ function App() {
     const nextSocket = io(API_BASE_URL);
     setSocket(nextSocket);
 
-    // load last 100 messages once socket connects
+    // load the most recent saved messages when the socket connects
     nextSocket.on("chat:history", (history) => {
       setMessages(history);
     });
 
-    // append new broadcasted messages for live updates
+    // append every newly broadcast message so the room stays live across tabs
     nextSocket.on("chat:message", (message) => {
       setMessages((currentMessages) => [...currentMessages, message]);
     });
 
-    // clean up listeners and disconnect socket once user logs out
+    // clean up listeners and disconnect the socket when the user logs out
     return () => {
       nextSocket.off("chat:history");
       nextSocket.off("chat:message");
@@ -84,8 +84,8 @@ function App() {
     };
   }, [user]);
 
-  // have auth form controlled by React so both sign up and login
-  // share same user/pass inputs
+  // leep the auth form controlled by React state so signup and login can
+  // share the same username and password inputs
   function handleAuthFieldChange(event) {
     const { name, value } = event.target;
     setAuthForm((currentForm) => ({
@@ -94,7 +94,7 @@ function App() {
     }));
   }
 
-  // submit either sign up or login form to matching backend route
+  // submit either the signup or login form to the matching backend route.
   async function handleAuthSubmit(event) {
     event.preventDefault();
     setAuthError("");
@@ -126,8 +126,8 @@ function App() {
     }
   }
 
-  // clear stored token and reset local ui state so
-  // the user fully exits authenticated chat session
+  // clear the stored token and reset UI state so the user fully exits
+  // the authenticated chat session on this device
   function handleLogout() {
     localStorage.removeItem(TOKEN_STORAGE_KEY);
     setUser(null);
@@ -136,8 +136,8 @@ function App() {
     setAuthError("");
   }
 
-  // sends message to backend
-  // backend modifies message and broadcasts back
+  // send a chat message to the backend
+  // backend assigns the tone, saves the message, and broadcasts it back to the room
   function handleSubmit(event) {
     event.preventDefault();
 
@@ -151,7 +151,7 @@ function App() {
     setContent("");
   }
 
-  // loading state while checking for existing session
+  // loading state while checking for an existing session
   if (isRestoringSession) {
     return (
       <main className="app-shell">
@@ -163,41 +163,18 @@ function App() {
     );
   }
 
-  // auth page if user doesn't exist yet
+  // of no authenticated user exists yet, show the auth screen instead of chat
   if (!user) {
     return (
-      // once user is logged in, display chat layout
       <main className="app-shell">
         <section className="auth-card">
           <p className="eyebrow">Real-time chat, but emotionally unreliable.</p>
           <h1>Mood Roulette</h1>
           <p className="auth-copy">
-            Create an account or log in to join the shared room. Your message still
-            gets tone-rolled by the server before it lands.
+            {authMode === "login"
+              ? "Log in to rejoin the shared room. Your message still gets tone-rolled by the server before it lands."
+              : "Create an account to join the shared room. Your message still gets tone-rolled by the server before it lands."}
           </p>
-
-          <div className="auth-tabs" role="tablist" aria-label="Authentication mode">
-            <button
-              type="button"
-              className={authMode === "login" ? "is-active" : ""}
-              onClick={() => {
-                setAuthMode("login");
-                setAuthError("");
-              }}
-            >
-              Log In
-            </button>
-            <button
-              type="button"
-              className={authMode === "signup" ? "is-active" : ""}
-              onClick={() => {
-                setAuthMode("signup");
-                setAuthError("");
-              }}
-            >
-              Sign Up
-            </button>
-          </div>
 
           <form className="auth-form" onSubmit={handleAuthSubmit}>
             <label>
@@ -206,7 +183,7 @@ function App() {
                 name="username"
                 value={authForm.username}
                 onChange={handleAuthFieldChange}
-                placeholder="pick-a-handle"
+                placeholder="minimum 3 characters"
                 autoComplete="username"
               />
             </label>
@@ -223,6 +200,38 @@ function App() {
               />
             </label>
 
+            <div className="auth-switcher">
+              {authMode === "login" ? (
+                <p>
+                  Need an account?{" "}
+                  <button
+                    type="button"
+                    className="auth-link"
+                    onClick={() => {
+                      setAuthMode("signup");
+                      setAuthError("");
+                    }}
+                  >
+                    Sign Up
+                  </button>
+                </p>
+              ) : (
+                <p>
+                  Already have an account?{" "}
+                  <button
+                    type="button"
+                    className="auth-link"
+                    onClick={() => {
+                      setAuthMode("login");
+                      setAuthError("");
+                    }}
+                  >
+                    Log In
+                  </button>
+                </p>
+              )}
+            </div>
+
             {authError ? <p className="form-error">{authError}</p> : null}
 
             <button type="submit" className="primary-button" disabled={isSubmittingAuth}>
@@ -230,7 +239,7 @@ function App() {
                 ? "Please wait..."
                 : authMode === "login"
                   ? "Log In"
-                  : "Create Account"}
+                  : "Sign Up"}
             </button>
           </form>
         </section>
