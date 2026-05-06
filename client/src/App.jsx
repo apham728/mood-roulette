@@ -20,6 +20,7 @@ function App() {
   const [isRewriting, setIsRewriting] = useState(false);
   const [sendError, setSendError] = useState("");
   const messagesEndRef = useRef(null);
+  const composerRef = useRef(null);
 
   // on first page load, try to restore a previous session from local storage
   // if a token exists, confirm with the backend which user is currently logged in
@@ -111,6 +112,13 @@ function App() {
 
   const isInitialHistoryLoad = useRef(false);
 
+  useEffect(() => {
+    if (!composerRef.current) return;
+
+    composerRef.current.style.height = "0px";
+    composerRef.current.style.height = `${composerRef.current.scrollHeight}px`;
+  }, [content]);
+
   // scroll to the bottom on history load (instant) and new messages (smooth)
   useEffect(() => {
     if (messages.length === 0) return;
@@ -119,7 +127,7 @@ function App() {
     messagesEndRef.current?.scrollIntoView({ behavior });
   }, [messages]);
 
-  // leep the auth form controlled by React state so signup and login can
+  // keep the auth form controlled by React state so signup and login can
   // share the same username and password inputs
   function handleAuthFieldChange(event) {
     const { name, value } = event.target;
@@ -158,6 +166,15 @@ function App() {
       setAuthError(error.message);
     } finally {
       setIsSubmittingAuth(false);
+    }
+  }
+
+  // press Enter to send quickly while still allowing Shift+Enter to
+  // manually go to a new line
+  function handleComposerKeyDown(event) {
+    if (event.key === "Enter" && !event.shiftKey) {
+      event.preventDefault();
+      handleSubmit(event);
     }
   }
 
@@ -200,7 +217,7 @@ function App() {
     );
   }
 
-  // of no authenticated user exists yet, show the auth screen instead of chat
+  // if no authenticated user exists yet, show the auth screen instead of chat
   if (!user) {
     return (
       <main className="app-shell">
@@ -322,11 +339,14 @@ function App() {
 
         <form className="chat-form" onSubmit={handleSubmit}>
           <div className="chat-input-wrapper">
-            <input
+            <textarea
+              ref={composerRef}
               value={content}
               onChange={(event) => setContent(event.target.value)}
+              onKeyDown={handleComposerKeyDown}
               placeholder="Type a message..."
               disabled={isRewriting}
+              rows={1}
             />
             {isRewriting && <span className="rewriting-indicator">rewriting...</span>}
             {sendError && <span className="send-error">{sendError}</span>}

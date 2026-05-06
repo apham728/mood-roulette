@@ -10,14 +10,18 @@ const http = require("http");
 const cors = require("cors");
 const { Server } = require("socket.io");
 const OpenAI = require("openai");
+
+const prisma = new PrismaClient();
 const openai = new OpenAI({
   baseURL: "https://openrouter.ai/api/v1",
   apiKey: process.env.OPENROUTER_API_KEY,
 });
-
-const prisma = new PrismaClient();
 const PORT = process.env.PORT || 3001;
 const JWT_SECRET = process.env.JWT_SECRET || "change-this-in-production";
+
+// safety and cost control constants
+const MAX_MESSAGE_LENGTH = 1000;
+const COOLDOWN_MS = 3000;
 
 const app = express();
 app.use(cors({ origin: "http://localhost:5173" }));
@@ -87,21 +91,21 @@ async function requireAuth(req, res, next) {
 }
 
 // rewrite the raw message using the AI model in the randomly selected tone.
-// the raw content is only used here and is never stored or returned to any client
+// the raw content is only used here and is never stored or returned to any client.
 // if the rewrite fails for any reason, we throw so the caller can handle it gracefully
 async function rewriteMessage(content, tone) {
-    const response = await openai.chat.completions.create({
-        model: "nvidia/nemotron-3-nano-30b-a3b:free",
-        messages: [
-            {
-                role: "system",
-                content: `You are a message rewriter. Rewrite the user's message in a ${tone} tone. Fully commit to the style. Preserve the core meaning. Return only the rewritten message - no explanation, no preamble, no quotes.`,
-            },
-            { role: "user", content },
-        ],
-    });
-  
-    return response.choices[0].message.content;
+  const response = await openai.chat.completions.create({
+    model: "nvidia/nemotron-3-nano-30b-a3b:free",
+    messages: [
+      {
+        role: "system",
+        content: `You are a message rewriter. Rewrite the user's message in a ${tone} tone. Fully commit to the style. Preserve the core meaning. Return only the rewritten message - no explanation, no preamble, no quotes.`,
+      },
+      { role: "user", content },
+    ],
+  });
+
+  return response.choices[0].message.content;
 }
 
 app.get("/health", (req, res) => {
@@ -223,6 +227,11 @@ io.use(async (socket, next) => {
   }
 });
 
+// track the last send timestamp per user id to enforce the cooldown.
+// this map lives in memory and resets if the server restarts, which is
+// acceptable for a rate limiting mechanism of this kind
+const lastSentAt = new Map();
+
 io.on("connection", async (socket) => {
   console.log("User connected:", socket.id, socket.user.username);
 
@@ -245,21 +254,46 @@ io.on("connection", async (socket) => {
       return;
     }
 
+    // reject messages that exceed the character limit before hitting the AI
+    if (content.trim().length > MAX_MESSAGE_LENGTH) {
+      socket.emit("chat:error", {
+        message: `Messages cannot exceed ${MAX_MESSAGE_LENGTH} characters.`,
+      });
+      return;
+    }
+
+    // enforce a per user cooldown to prevent spam and control AI API costs
+    const now = Date.now();
+    const lastSent = lastSentAt.get(socket.user.id) || 0;
+    const elapsed = now - lastSent;
+
+    if (elapsed < COOLDOWN_MS) {
+      const remaining = Math.ceil((COOLDOWN_MS - elapsed) / 1000);
+      socket.emit("chat:error", {
+        message: `Please wait ${remaining} second${remaining !== 1 ? "s" : ""} before sending again.`,
+      });
+      return;
+    }
+
+    // record the send time before the async rewrite so back-to-back sends
+    // from the same user are blocked even while the AI call is in flight
+    lastSentAt.set(socket.user.id, now);
+
     const tones = ["Professional", "Passive Aggressive", "Shakespearean", "Unhinged"];
     const tone = tones[Math.floor(Math.random() * tones.length)];
 
     // emit a pending event back to the sender so the UI can show a
-    // "rewriting..." state while the Claude API call is in flight
+    // "rewriting..." state while the API call is in flight
     socket.emit("chat:pending");
 
     let rewrittenContent;
 
     try {
-      // rewrite the raw message through the AI model before it touches the database
-      // the original content is temporary and must never be stored or broadcast
+      // rewrite the raw message through the AI model before it touches the database.
+      // the original content is transient and must never be stored or broadcast
       rewrittenContent = await rewriteMessage(content.trim(), tone);
     } catch (error) {
-      console.error("Claude rewrite failed:", error.message);
+      console.error("Rewrite failed:", error.message);
       // notify only the sender that their message could not be delivered
       socket.emit("chat:error", { message: "Message could not be delivered. Please try again." });
       return;

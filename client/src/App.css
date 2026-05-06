@@ -20,7 +20,8 @@ body {
 }
 
 button,
-input {
+input,
+textarea {
   font: inherit;
 }
 
@@ -129,7 +130,8 @@ h1 {
   color: #5a4734;
 }
 
-input {
+input,
+textarea {
   width: 100%;
   border: 1px solid rgba(85, 59, 35, 0.18);
   border-radius: 12px;
@@ -138,12 +140,14 @@ input {
   color: #2f2116;
 }
 
-input:focus {
+input:focus,
+textarea:focus {
   outline: 2px solid rgba(189, 107, 34, 0.35);
   border-color: rgba(189, 107, 34, 0.5);
 }
 
-input:disabled {
+input:disabled,
+textarea:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
@@ -242,12 +246,21 @@ input:disabled {
 .chat-form {
   padding: 0 28px 28px;
   grid-template-columns: 1fr auto;
+  align-items: end;
 }
 
 .chat-input-wrapper {
   display: flex;
   flex-direction: column;
   gap: 6px;
+}
+
+.chat-input-wrapper textarea {
+  resize: none;
+  overflow-y: auto;
+  min-height: 56px;
+  max-height: 180px;
+  line-height: 1.5;
 }
 
 .rewriting-indicator {
