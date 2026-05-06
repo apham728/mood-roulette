@@ -8,15 +8,18 @@ datasource db {
 }
 
 model User {
-  id            String @id @default(uuid())
-  username      String @unique
-  passwordHash  String
-  createdAt     DateTime @default(now())
+  id           String    @id @default(uuid())
+  username     String    @unique
+  passwordHash String
+  createdAt    DateTime  @default(now())
+  messages     Message[]
 }
 
 model Message {
   id        String   @id @default(uuid())
   sender    String
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
   content   String
   tone      String
   createdAt DateTime @default(now())

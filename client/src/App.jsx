@@ -2,8 +2,8 @@ import { useEffect, useState } from "react";
 import { io } from "socket.io-client";
 import "./App.css";
 
-// frontend config for the backend URL and the browser storage key
-// persist a logged-in session between page refreshes
+// Frontend config for the backend URL and the browser storage key.
+// These are used to restore the logged-in session between page refreshes.
 const API_BASE_URL = "http://localhost:3001";
 const TOKEN_STORAGE_KEY = "mood-roulette-token";
 
@@ -18,9 +18,9 @@ function App() {
   const [messages, setMessages] = useState([]);
   const [socket, setSocket] = useState(null);
 
-// on first page load, try to restore a previous session from local storage
-// if a token exists, confirm with the backend which user is currently logged in
-// before rendering the chat UI
+  // On first page load, try to restore a previous session from localStorage.
+  // If a token exists, confirm with the backend which user is currently logged in
+  // before rendering the chat UI.
   useEffect(() => {
     const storedToken = localStorage.getItem(TOKEN_STORAGE_KEY);
 
@@ -29,8 +29,8 @@ function App() {
       return;
     }
 
-    // validate the saved token with /auth/me so the frontend only restores
-    // sessions that the backend still considers valid
+    // Validate the saved token with /auth/me so the frontend only restores
+    // sessions that the backend still considers valid.
     async function restoreSession() {
       try {
         const response = await fetch(`${API_BASE_URL}/auth/me`, {
@@ -55,37 +55,49 @@ function App() {
     restoreSession();
   }, []);
 
-// open a single live socket connection for chat history and real-time
-// message updates once the user is authenticated
+  // Open a single authenticated socket connection for chat history and real-time
+  // message updates once the user is authenticated.
   useEffect(() => {
     if (!user) {
       return undefined;
     }
 
-    const nextSocket = io(API_BASE_URL);
+    const token = localStorage.getItem(TOKEN_STORAGE_KEY);
+    const nextSocket = io(API_BASE_URL, {
+      auth: {
+        token,
+      },
+    });
+
     setSocket(nextSocket);
 
-    // load the most recent saved messages when the socket connects
+    // Load the most recent saved messages when the socket connects.
     nextSocket.on("chat:history", (history) => {
       setMessages(history);
     });
 
-    // append every newly broadcast message so the room stays live across tabs
+    // Append every newly broadcast message so the room stays live across tabs.
     nextSocket.on("chat:message", (message) => {
       setMessages((currentMessages) => [...currentMessages, message]);
     });
 
-    // clean up listeners and disconnect the socket when the user logs out
+    nextSocket.on("connect_error", (error) => {
+      setAuthError(error.message || "Chat connection failed.");
+    });
+
+    // Clean up listeners and disconnect the socket when the user logs out
+    // or the component unmounts so duplicate connections do not accumulate.
     return () => {
       nextSocket.off("chat:history");
       nextSocket.off("chat:message");
+      nextSocket.off("connect_error");
       nextSocket.disconnect();
       setSocket(null);
     };
   }, [user]);
 
-  // leep the auth form controlled by React state so signup and login can
-  // share the same username and password inputs
+  // Keep the auth form controlled by React state so signup and login can
+  // share the same username and password inputs.
   function handleAuthFieldChange(event) {
     const { name, value } = event.target;
     setAuthForm((currentForm) => ({
@@ -94,7 +106,7 @@ function App() {
     }));
   }
 
-  // submit either the signup or login form to the matching backend route.
+  // Submit either the signup or login form to the matching backend route.
   async function handleAuthSubmit(event) {
     event.preventDefault();
     setAuthError("");
@@ -126,8 +138,8 @@ function App() {
     }
   }
 
-  // clear the stored token and reset UI state so the user fully exits
-  // the authenticated chat session on this device
+  // Clear the stored token and reset UI state so the user fully exits
+  // the authenticated chat session on this device.
   function handleLogout() {
     localStorage.removeItem(TOKEN_STORAGE_KEY);
     setUser(null);
@@ -136,22 +148,22 @@ function App() {
     setAuthError("");
   }
 
-  // send a chat message to the backend
-  // backend assigns the tone, saves the message, and broadcasts it back to the room
+  // Send a chat message through the active socket connection. The backend
+  // derives the sender from the authenticated socket, saves the message, and
+  // broadcasts it back to the room.
   function handleSubmit(event) {
     event.preventDefault();
 
     if (!content.trim() || !user || !socket) return;
 
     socket.emit("chat:send", {
-      sender: user.username,
       content,
     });
 
     setContent("");
   }
 
-  // loading state while checking for an existing session
+  // Show a lightweight loading state while checking for an existing session.
   if (isRestoringSession) {
     return (
       <main className="app-shell">
@@ -163,7 +175,7 @@ function App() {
     );
   }
 
-  // of no authenticated user exists yet, show the auth screen instead of chat
+  // If no authenticated user exists yet, show the auth screen instead of chat.
   if (!user) {
     return (
       <main className="app-shell">
@@ -262,7 +274,6 @@ function App() {
 
         <section className="message-list">
           {messages.map((message) => (
-            // display messages with tone, content, and timestamp
             <article key={message.id} className="message-card">
               <div className="message-meta">
                 <strong>{message.sender}</strong>
