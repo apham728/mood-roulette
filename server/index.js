@@ -9,6 +9,11 @@ const express = require("express");
 const http = require("http");
 const cors = require("cors");
 const { Server } = require("socket.io");
+const OpenAI = require("openai");
+const openai = new OpenAI({
+  baseURL: "https://openrouter.ai/api/v1",
+  apiKey: process.env.OPENROUTER_API_KEY,
+});
 
 const prisma = new PrismaClient();
 const PORT = process.env.PORT || 3001;
@@ -79,6 +84,24 @@ async function requireAuth(req, res, next) {
   } catch (error) {
     return res.status(401).json({ error: "Invalid or expired token." });
   }
+}
+
+// rewrite the raw message using the AI model in the randomly selected tone.
+// the raw content is only used here and is never stored or returned to any client
+// if the rewrite fails for any reason, we throw so the caller can handle it gracefully
+async function rewriteMessage(content, tone) {
+    const response = await openai.chat.completions.create({
+        model: "nvidia/nemotron-3-nano-30b-a3b:free",
+        messages: [
+            {
+                role: "system",
+                content: `You are a message rewriter. Rewrite the user's message in a ${tone} tone. Fully commit to the style. Preserve the core meaning. Return only the rewritten message - no explanation, no preamble, no quotes.`,
+            },
+            { role: "user", content },
+        ],
+    });
+  
+    return response.choices[0].message.content;
 }
 
 app.get("/health", (req, res) => {
@@ -225,13 +248,32 @@ io.on("connection", async (socket) => {
     const tones = ["Professional", "Passive Aggressive", "Shakespearean", "Unhinged"];
     const tone = tones[Math.floor(Math.random() * tones.length)];
 
+    // emit a pending event back to the sender so the UI can show a
+    // "rewriting..." state while the Claude API call is in flight
+    socket.emit("chat:pending");
+
+    let rewrittenContent;
+
+    try {
+      // rewrite the raw message through the AI model before it touches the database
+      // the original content is temporary and must never be stored or broadcast
+      rewrittenContent = await rewriteMessage(content.trim(), tone);
+    } catch (error) {
+      console.error("Claude rewrite failed:", error.message);
+      // notify only the sender that their message could not be delivered
+      socket.emit("chat:error", { message: "Message could not be delivered. Please try again." });
+      return;
+    }
+
     // persist the message using the authenticated socket user instead of any
-    // sender value provided by the client
+    // sender value provided by the client.
+    // only the rewritten content, tone, and user identity are stored —
+    // the original raw message is discarded after the rewrite above
     const savedMessage = await prisma.message.create({
       data: {
         sender: socket.user.username,
         userId: socket.user.id,
-        content: content.trim(),
+        content: rewrittenContent,
         tone,
       },
       include: {
