@@ -2,16 +2,6 @@
 
 A real-time chat app where messages are randomly assigned a tone before delivery.
 
-## Current Status
-
-- React + Vite frontend
-- Node.js + Express backend
-- Socket.IO realtime messaging
-- PostgreSQL + Prisma message persistence
-- Last 100 messages load on connect
-- Random tone selection working
-- AI rewriting and authentication not added yet
-
 ## Tech Stack
 
 - React
@@ -42,10 +32,19 @@ Create `server/.env`:
 
 DATABASE_URL="postgresql://YOUR_USERNAME@localhost:5432/mood_roulette"
 
+## Completed
+
+- User signup and login with JWT authentication
+- Session restore on refresh using `/auth/me`
+- Frontend token storage with authenticated chat access
+- Socket.IO connections now require a valid JWT
+- Messages are now linked to authenticated users in PostgreSQL with Prisma
+- The backend now derives the sender from the authenticated socket instead of trusting the client payload
+- Last 100 messages still load on connect, now with real user identity attached
+- Random tone assignment still works on persisted chat messages
+
 ## Roadmap
 
-- Add authentication
 - Add Claude/OpenAI API rewriting
-- Store users and associate messages with users
 - Add online presence
 - Deploy frontend and backend
