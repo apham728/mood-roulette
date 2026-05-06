@@ -17,6 +17,7 @@ function App() {
   const [content, setContent] = useState("");
   const [messages, setMessages] = useState([]);
   const [socket, setSocket] = useState(null);
+  const [onlineUsers, setOnlineUsers] = useState([]);
   const [isRewriting, setIsRewriting] = useState(false);
   const [sendError, setSendError] = useState("");
   const messagesEndRef = useRef(null);
@@ -59,8 +60,8 @@ function App() {
     restoreSession();
   }, []);
 
-  // open a single live socket connection for chat history and real-time
-  // message updates once the user is authenticated
+  // open a single live socket connection for chat history, presence,
+  // and real-time message updates once the user is authenticated
   useEffect(() => {
     if (!user) {
       return undefined;
@@ -87,13 +88,23 @@ function App() {
       setMessages((currentMessages) => [...currentMessages, message]);
     });
 
-    // show a rewriting indicator while the backend AI call is in flight
+    // append transient join and leave events without storing them in the database
+    nextSocket.on("presence:event", (event) => {
+      setMessages((currentMessages) => [...currentMessages, event]);
+    });
+
+    // keep the online roster in sync with the server's current connection state
+    nextSocket.on("presence:update", (users) => {
+      setOnlineUsers(users);
+    });
+
+    // show a rewriting indicator while the backend ai call is in flight
     nextSocket.on("chat:pending", () => {
       setIsRewriting(true);
       setSendError("");
     });
 
-    // surface delivery failures to the sender without crashing the UI
+    // surface delivery failures to the sender without crashing the ui
     nextSocket.on("chat:error", ({ message }) => {
       setIsRewriting(false);
       setSendError(message);
@@ -103,10 +114,13 @@ function App() {
     return () => {
       nextSocket.off("chat:history");
       nextSocket.off("chat:message");
+      nextSocket.off("presence:event");
+      nextSocket.off("presence:update");
       nextSocket.off("chat:pending");
       nextSocket.off("chat:error");
       nextSocket.disconnect();
       setSocket(null);
+      setOnlineUsers([]);
     };
   }, [user]);
 
@@ -119,7 +133,7 @@ function App() {
     composerRef.current.style.height = `${composerRef.current.scrollHeight}px`;
   }, [content]);
 
-  // scroll to the bottom on history load (instant) and new messages (smooth)
+  // scroll to the bottom on history load and new feed entries
   useEffect(() => {
     if (messages.length === 0) return;
     const behavior = isInitialHistoryLoad.current ? "smooth" : "instant";
@@ -127,7 +141,7 @@ function App() {
     messagesEndRef.current?.scrollIntoView({ behavior });
   }, [messages]);
 
-  // keep the auth form controlled by React state so signup and login can
+  // keep the auth form controlled by react state so signup and login can
   // share the same username and password inputs
   function handleAuthFieldChange(event) {
     const { name, value } = event.target;
@@ -137,7 +151,7 @@ function App() {
     }));
   }
 
-  // submit either the signup or login form to the matching backend route.
+  // submit either the signup or login form to the matching backend route
   async function handleAuthSubmit(event) {
     event.preventDefault();
     setAuthError("");
@@ -169,7 +183,7 @@ function App() {
     }
   }
 
-  // press Enter to send quickly while still allowing Shift+Enter to
+  // press enter to send quickly while still allowing shift+enter to
   // manually go to a new line
   function handleComposerKeyDown(event) {
     if (event.key === "Enter" && !event.shiftKey) {
@@ -178,12 +192,13 @@ function App() {
     }
   }
 
-  // clear the stored token and reset UI state so the user fully exits
+  // clear the stored token and reset ui state so the user fully exits
   // the authenticated chat session on this device
   function handleLogout() {
     localStorage.removeItem(TOKEN_STORAGE_KEY);
     setUser(null);
     setMessages([]);
+    setOnlineUsers([]);
     setContent("");
     setAuthError("");
     setSendError("");
@@ -314,26 +329,45 @@ function App() {
           </button>
         </header>
 
+        <section className="presence-strip">
+          <div>
+            <strong>online now</strong>
+            <span>{onlineUsers.length} user{onlineUsers.length !== 1 ? "s" : ""}</span>
+          </div>
+          <div className="presence-list">
+            {onlineUsers.map((onlineUser) => (
+              <span key={onlineUser} className="presence-pill">
+                {onlineUser}
+              </span>
+            ))}
+          </div>
+        </section>
+
         <section className="message-list">
-          {messages.map((message) => (
-            // display messages with tone, content, and timestamp
-            <article key={message.id} className="message-card">
-              <div className="message-meta">
-                <strong>{message.sender}</strong>
-                <div className="message-meta-right">
-                  <small>
-                    {new Date(message.createdAt).toLocaleDateString()}{" "}
-                    {new Date(message.createdAt).toLocaleTimeString([], {
-                      hour: "numeric",
-                      minute: "2-digit",
-                    })}
-                  </small>
-                  <span className="tone-badge">{message.tone}</span>
+          {messages.map((message) =>
+            message.type === "system" ? (
+              <p key={message.id} className="system-event">
+                {message.content}
+              </p>
+            ) : (
+              <article key={message.id} className="message-card">
+                <div className="message-meta">
+                  <strong>{message.sender}</strong>
+                  <div className="message-meta-right">
+                    <small>
+                      {new Date(message.createdAt).toLocaleDateString()} {" "}
+                      {new Date(message.createdAt).toLocaleTimeString([], {
+                        hour: "numeric",
+                        minute: "2-digit",
+                      })}
+                    </small>
+                    <span className="tone-badge">{message.tone}</span>
+                  </div>
                 </div>
-              </div>
-              <p>{message.content}</p>
-            </article>
-          ))}
+                <p>{message.content}</p>
+              </article>
+            )
+          )}
           <div ref={messagesEndRef} />
         </section>
 

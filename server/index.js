@@ -2,6 +2,7 @@
 
 require("dotenv").config();
 
+const { randomUUID } = require("crypto");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const { PrismaClient } = require("@prisma/client");
@@ -27,8 +28,8 @@ const app = express();
 app.use(cors({ origin: "http://localhost:5173" }));
 app.use(express.json());
 
-// create  signed JWT that the frontend stores after signup/login
-//  token carries the minimum identity needed so future requests
+// create signed jwt that the frontend stores after signup/login
+// token carries the minimum identity needed so future requests
 // and socket connections can prove which user is acting
 function createToken(user) {
   return jwt.sign(
@@ -38,9 +39,8 @@ function createToken(user) {
   );
 }
 
-// pull the raw token string out of authorization header like:
-// "Bearer <token>". If the header is invalid, we treat the
-// request as unauthenticated
+// pull the raw token string out of authorization header like
+// "Bearer <token>" and return null if the format is wrong
 function getBearerToken(headerValue = "") {
   if (!headerValue.startsWith("Bearer ")) {
     return null;
@@ -59,6 +59,7 @@ async function findSafeUserById(userId) {
 function formatMessage(message) {
   return {
     id: message.id,
+    type: "message",
     sender: message.user?.username || message.sender,
     userId: message.userId || null,
     content: message.content,
@@ -67,7 +68,24 @@ function formatMessage(message) {
   };
 }
 
-// verifies the JWT, loads the matching user from the database
+function createPresenceEvent(content) {
+  return {
+    id: randomUUID(),
+    type: "system",
+    content,
+    createdAt: new Date().toISOString(),
+  };
+}
+
+function broadcastOnlineUsers(io, connectedUsers) {
+  const onlineUsers = [...connectedUsers.values()]
+    .map(({ user }) => user.username)
+    .sort((left, right) => left.localeCompare(right));
+
+  io.emit("presence:update", onlineUsers);
+}
+
+// verifies the jwt and loads the matching user from the database
 async function requireAuth(req, res, next) {
   const token = getBearerToken(req.headers.authorization);
 
@@ -90,9 +108,8 @@ async function requireAuth(req, res, next) {
   }
 }
 
-// rewrite the raw message using the AI model in the randomly selected tone.
-// the raw content is only used here and is never stored or returned to any client.
-// if the rewrite fails for any reason, we throw so the caller can handle it gracefully
+// rewrite the raw message using the ai model in the randomly selected tone
+// the raw content is only used here and is never stored or returned to any client
 async function rewriteMessage(content, tone) {
   const response = await openai.chat.completions.create({
     model: "nvidia/nemotron-3-nano-30b-a3b:free",
@@ -112,8 +129,8 @@ app.get("/health", (req, res) => {
   res.json({ status: "ok", service: "mood-roulette-server" });
 });
 
-// create a new account, hash the password before storage, and return 
-// a JWT so the frontend can treat signup as an authenticated session
+// create a new account, hash password before storage, and return
+// a jwt so the frontend can treat signup as an authenticated session
 app.post("/auth/signup", async (req, res) => {
   const username = req.body.username?.trim();
   const password = req.body.password;
@@ -152,8 +169,7 @@ app.post("/auth/signup", async (req, res) => {
 });
 
 // log an existing user in by comparing the submitted password against the
-// stored password hash. on success, we return the same session payload shape
-// as signup so the frontend can reuse one auth flow
+// stored password hash and return the same payload shape as signup
 app.post("/auth/login", async (req, res) => {
   const username = req.body.username?.trim();
   const password = req.body.password;
@@ -186,9 +202,7 @@ app.post("/auth/login", async (req, res) => {
   });
 });
 
-// restoring the session on page refresh through the frontend 
-// sending its stored token to confirm who is currently
-// logged in
+// restore the session on page refresh through the frontend sending its token
 app.get("/auth/me", requireAuth, (req, res) => {
   res.json({ user: req.user });
 });
@@ -202,9 +216,7 @@ const io = new Server(server, {
   },
 });
 
-// require every socket connection to present a valid JWT before joining chat
-// this lets the server own user identity instead of trusting sender fields
-// coming from the browser
+// require every socket connection to present a valid jwt before joining chat
 io.use(async (socket, next) => {
   const token = socket.handshake.auth?.token;
 
@@ -227,13 +239,23 @@ io.use(async (socket, next) => {
   }
 });
 
-// track the last send timestamp per user id to enforce the cooldown.
-// this map lives in memory and resets if the server restarts, which is
-// acceptable for a rate limiting mechanism of this kind
+// track cooldowns in memory to slow spam and protect api costs
 const lastSentAt = new Map();
+
+// track connected users by user id so multiple tabs do not create duplicate
+// join or leave events for the same person
+const connectedUsers = new Map();
 
 io.on("connection", async (socket) => {
   console.log("User connected:", socket.id, socket.user.username);
+
+  const existingConnection = connectedUsers.get(socket.user.id);
+  const isFirstConnection = !existingConnection;
+
+  connectedUsers.set(socket.user.id, {
+    user: socket.user,
+    count: (existingConnection?.count || 0) + 1,
+  });
 
   // each new authenticated socket gets the last 100 persisted messages so a
   // refresh or new tab can render recent chat history immediately
@@ -248,13 +270,17 @@ io.on("connection", async (socket) => {
   });
 
   socket.emit("chat:history", recentMessages.reverse().map(formatMessage));
+  broadcastOnlineUsers(io, connectedUsers);
+
+  if (isFirstConnection) {
+    io.emit("presence:event", createPresenceEvent(`${socket.user.username} joined the room`));
+  }
 
   socket.on("chat:send", async ({ content }) => {
     if (!content?.trim()) {
       return;
     }
 
-    // reject messages that exceed the character limit before hitting the AI
     if (content.trim().length > MAX_MESSAGE_LENGTH) {
       socket.emit("chat:error", {
         message: `Messages cannot exceed ${MAX_MESSAGE_LENGTH} characters.`,
@@ -262,7 +288,6 @@ io.on("connection", async (socket) => {
       return;
     }
 
-    // enforce a per user cooldown to prevent spam and control AI API costs
     const now = Date.now();
     const lastSent = lastSentAt.get(socket.user.id) || 0;
     const elapsed = now - lastSent;
@@ -275,34 +300,23 @@ io.on("connection", async (socket) => {
       return;
     }
 
-    // record the send time before the async rewrite so back-to-back sends
-    // from the same user are blocked even while the AI call is in flight
     lastSentAt.set(socket.user.id, now);
 
     const tones = ["Professional", "Passive Aggressive", "Shakespearean", "Unhinged"];
     const tone = tones[Math.floor(Math.random() * tones.length)];
 
-    // emit a pending event back to the sender so the UI can show a
-    // "rewriting..." state while the API call is in flight
     socket.emit("chat:pending");
 
     let rewrittenContent;
 
     try {
-      // rewrite the raw message through the AI model before it touches the database.
-      // the original content is transient and must never be stored or broadcast
       rewrittenContent = await rewriteMessage(content.trim(), tone);
     } catch (error) {
       console.error("Rewrite failed:", error.message);
-      // notify only the sender that their message could not be delivered
       socket.emit("chat:error", { message: "Message could not be delivered. Please try again." });
       return;
     }
 
-    // persist the message using the authenticated socket user instead of any
-    // sender value provided by the client.
-    // only the rewritten content, tone, and user identity are stored —
-    // the original raw message is discarded after the rewrite above
     const savedMessage = await prisma.message.create({
       data: {
         sender: socket.user.username,
@@ -321,6 +335,23 @@ io.on("connection", async (socket) => {
   });
 
   socket.on("disconnect", () => {
+    const currentConnection = connectedUsers.get(socket.user.id);
+
+    if (!currentConnection) {
+      return;
+    }
+
+    if (currentConnection.count <= 1) {
+      connectedUsers.delete(socket.user.id);
+      io.emit("presence:event", createPresenceEvent(`${socket.user.username} left the room`));
+    } else {
+      connectedUsers.set(socket.user.id, {
+        user: currentConnection.user,
+        count: currentConnection.count - 1,
+      });
+    }
+
+    broadcastOnlineUsers(io, connectedUsers);
     console.log("User disconnected:", socket.id);
   });
 });

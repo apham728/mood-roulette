@@ -189,10 +189,47 @@ textarea:disabled {
   align-items: flex-start;
 }
 
+.presence-strip {
+  display: grid;
+  gap: 12px;
+  padding: 16px 28px 0;
+}
+
+.presence-strip > div:first-child {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  color: #6d5640;
+}
+
+.presence-strip strong {
+  text-transform: lowercase;
+  font-size: 0.85rem;
+}
+
+.presence-strip span {
+  font-size: 0.82rem;
+}
+
+.presence-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.presence-pill {
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(105, 75, 45, 0.09);
+  color: #5f472f;
+  font-size: 0.82rem;
+}
+
 .message-list {
   display: grid;
   gap: 14px;
-  padding: 22px 28px;
+  padding: 18px 28px 22px;
   max-height: 56vh;
   overflow-y: auto;
 }
@@ -204,12 +241,14 @@ textarea:disabled {
   border: 1px solid rgba(72, 51, 28, 0.08);
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: stretch;
 }
 
 .message-card p {
   margin: 10px 0 0;
+  width: 100%;
   line-height: 1.5;
+  text-align: left;
 }
 
 .message-meta {
@@ -275,12 +314,20 @@ textarea:disabled {
   padding-left: 4px;
 }
 
+.system-event {
+  margin: 0;
+  text-align: center;
+  font-size: 0.82rem;
+  color: #8d755f;
+}
+
 @media (max-width: 700px) {
   .auth-card {
     padding: 24px;
   }
 
   .chat-header,
+  .presence-strip,
   .message-list,
   .chat-form {
     padding-left: 18px;
