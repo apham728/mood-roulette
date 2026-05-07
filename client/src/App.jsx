@@ -4,7 +4,16 @@ import "./App.css";
 
 // frontend config for the backend URL and the browser storage key
 // persist a logged-in session between page refreshes
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:3001";
+const rawApiBaseUrl = import.meta.env.VITE_API_BASE_URL;
+const normalizedApiBaseUrl = (rawApiBaseUrl || "").trim().replace(/\/+$/, "");
+const API_BASE_URL = normalizedApiBaseUrl || "http://localhost:3001";
+
+try {
+  new URL(API_BASE_URL);
+} catch {
+  console.error("invalid VITE_API_BASE_URL:", JSON.stringify(rawApiBaseUrl));
+}
+
 const TOKEN_STORAGE_KEY = "mood-roulette-token";
 
 function App() {
