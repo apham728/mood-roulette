@@ -17,9 +17,11 @@ function App() {
   const [content, setContent] = useState("");
   const [messages, setMessages] = useState([]);
   const [socket, setSocket] = useState(null);
-  const [onlineUsers, setOnlineUsers] = useState([]);
+  const [connectionState, setConnectionState] = useState("disconnected");
+  const [reconnectAttempt, setReconnectAttempt] = useState(0);
   const [isRewriting, setIsRewriting] = useState(false);
   const [sendError, setSendError] = useState("");
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const messagesEndRef = useRef(null);
   const composerRef = useRef(null);
 
@@ -76,6 +78,42 @@ function App() {
 
     setSocket(nextSocket);
 
+    // keep live connection state so ui can show connect and reconnect health
+    const handleConnect = () => {
+      setConnectionState("connected");
+      setReconnectAttempt(0);
+      setIsSettingsOpen(false);
+      setSendError("");
+    };
+
+    const handleDisconnect = () => {
+      setConnectionState("reconnecting");
+    };
+
+    const handleConnectError = (error) => {
+      setConnectionState("reconnecting");
+
+      if (error?.message === "Authentication required." || error?.message === "Invalid or expired token.") {
+        localStorage.removeItem(TOKEN_STORAGE_KEY);
+        setUser(null);
+      }
+    };
+
+    const handleReconnectAttempt = (attempt) => {
+      setConnectionState("reconnecting");
+      setReconnectAttempt(attempt);
+    };
+
+    const handleReconnectFailed = () => {
+      setConnectionState("disconnected");
+    };
+
+    nextSocket.on("connect", handleConnect);
+    nextSocket.on("disconnect", handleDisconnect);
+    nextSocket.on("connect_error", handleConnectError);
+    nextSocket.io.on("reconnect_attempt", handleReconnectAttempt);
+    nextSocket.io.on("reconnect_failed", handleReconnectFailed);
+
     // load the most recent saved messages when the socket connects
     nextSocket.on("chat:history", (history) => {
       setMessages(history);
@@ -91,11 +129,6 @@ function App() {
     // append transient join and leave events without storing them in the database
     nextSocket.on("presence:event", (event) => {
       setMessages((currentMessages) => [...currentMessages, event]);
-    });
-
-    // keep the online roster in sync with the server's current connection state
-    nextSocket.on("presence:update", (users) => {
-      setOnlineUsers(users);
     });
 
     // show a rewriting indicator while the backend ai call is in flight
@@ -115,12 +148,18 @@ function App() {
       nextSocket.off("chat:history");
       nextSocket.off("chat:message");
       nextSocket.off("presence:event");
-      nextSocket.off("presence:update");
       nextSocket.off("chat:pending");
       nextSocket.off("chat:error");
+      nextSocket.off("connect", handleConnect);
+      nextSocket.off("disconnect", handleDisconnect);
+      nextSocket.off("connect_error", handleConnectError);
+      nextSocket.io.off("reconnect_attempt", handleReconnectAttempt);
+      nextSocket.io.off("reconnect_failed", handleReconnectFailed);
       nextSocket.disconnect();
       setSocket(null);
-      setOnlineUsers([]);
+      setConnectionState("disconnected");
+      setReconnectAttempt(0);
+      setIsSettingsOpen(false);
     };
   }, [user]);
 
@@ -198,11 +237,13 @@ function App() {
     localStorage.removeItem(TOKEN_STORAGE_KEY);
     setUser(null);
     setMessages([]);
-    setOnlineUsers([]);
     setContent("");
     setAuthError("");
     setSendError("");
     setIsRewriting(false);
+    setConnectionState("disconnected");
+    setReconnectAttempt(0);
+    setIsSettingsOpen(false);
   }
 
   // send a chat message to the backend
@@ -210,7 +251,7 @@ function App() {
   function handleSubmit(event) {
     event.preventDefault();
 
-    if (!content.trim() || !user || !socket || isRewriting) return;
+    if (!content.trim() || !user || !socket || isRewriting || connectionState !== "connected") return;
 
     socket.emit("chat:send", {
       content,
@@ -223,7 +264,7 @@ function App() {
   // loading state while checking for an existing session
   if (isRestoringSession) {
     return (
-      <main className="app-shell">
+      <main className="app-shell app-shell-auth">
         <section className="auth-card">
           <h1>Mood Roulette</h1>
           <p>Restoring your session...</p>
@@ -235,14 +276,14 @@ function App() {
   // if no authenticated user exists yet, show the auth screen instead of chat
   if (!user) {
     return (
-      <main className="app-shell">
+      <main className="app-shell app-shell-auth">
         <section className="auth-card">
           <p className="eyebrow">Real-time chat, but emotionally unreliable.</p>
           <h1>Mood Roulette</h1>
           <p className="auth-copy">
             {authMode === "login"
-              ? "Log in to rejoin the shared room. Your message still gets tone-rolled by the server before it lands."
-              : "Create an account to join the shared room. Your message still gets tone-rolled by the server before it lands."}
+              ? "Chat without control over your tone."
+              : "Chat without control over your tone."}
           </p>
 
           <form className="auth-form" onSubmit={handleAuthSubmit}>
@@ -317,79 +358,144 @@ function App() {
   }
 
   return (
-    <main className="app-shell">
+    <main className="app-shell app-shell-chat">
       <section className="chat-panel">
         <header className="chat-header">
           <div className="chat-header-left">
             <p className="eyebrow">Signed in as {user.username}</p>
             <h1>Mood Roulette</h1>
           </div>
-          <button type="button" className="secondary-button" onClick={handleLogout}>
-            Log Out
-          </button>
         </header>
 
-        <section className="presence-strip">
-          <div>
-            <strong>online now</strong>
-            <span>{onlineUsers.length} user{onlineUsers.length !== 1 ? "s" : ""}</span>
-          </div>
-          <div className="presence-list">
-            {onlineUsers.map((onlineUser) => (
-              <span key={onlineUser} className="presence-pill">
-                {onlineUser}
-              </span>
-            ))}
-          </div>
-        </section>
+        <div className="chat-body">
+          <div className="chat-main">
+            <section className="message-list">
+              {messages.map((message, index) => {
+                const previousMessage = messages[index - 1];
+                const nextMessage = messages[index + 1];
+                const isCompactBurst =
+                  message.type !== "system" &&
+                  previousMessage &&
+                  previousMessage.type !== "system" &&
+                  previousMessage.sender === message.sender;
+                const hasNextSameSender =
+                  message.type !== "system" &&
+                  nextMessage &&
+                  nextMessage.type !== "system" &&
+                  nextMessage.sender === message.sender;
+                const isLikelySingleLine =
+                  typeof message.content === "string" &&
+                  !message.content.includes("\n") &&
+                  message.content.length <= 74;
 
-        <section className="message-list">
-          {messages.map((message) =>
-            message.type === "system" ? (
-              <p key={message.id} className="system-event">
-                {message.content}
-              </p>
-            ) : (
-              <article key={message.id} className="message-card">
-                <div className="message-meta">
-                  <strong>{message.sender}</strong>
-                  <div className="message-meta-right">
-                    <small>
-                      {new Date(message.createdAt).toLocaleDateString()} {" "}
-                      {new Date(message.createdAt).toLocaleTimeString([], {
-                        hour: "numeric",
-                        minute: "2-digit",
-                      })}
-                    </small>
-                    <span className="tone-badge">{message.tone}</span>
-                  </div>
-                </div>
-                <p>{message.content}</p>
-              </article>
-            )
-          )}
-          <div ref={messagesEndRef} />
-        </section>
+                if (message.type === "system") {
+                  return (
+                    <p key={message.id} className="system-event">
+                      {message.content}
+                    </p>
+                  );
+                }
 
-        <form className="chat-form" onSubmit={handleSubmit}>
-          <div className="chat-input-wrapper">
-            <textarea
-              ref={composerRef}
-              value={content}
-              onChange={(event) => setContent(event.target.value)}
-              onKeyDown={handleComposerKeyDown}
-              placeholder="Type a message..."
-              disabled={isRewriting}
-              rows={1}
-            />
-            {isRewriting && <span className="rewriting-indicator">rewriting...</span>}
-            {sendError && <span className="send-error">{sendError}</span>}
+                return (
+                  <article
+                    key={message.id}
+                    className={`message-card${isCompactBurst ? " compact" : ""}${
+                      hasNextSameSender ? " burst-chain" : ""
+                    }${isLikelySingleLine ? " single-line" : " multi-line"}`}
+                  >
+                    {!isCompactBurst && (
+                      <div className="message-meta">
+                        <strong>{message.sender}</strong>
+                        <div className="message-meta-right">
+                          <small>
+                            {new Date(message.createdAt).toLocaleDateString()} {" "}
+                            {new Date(message.createdAt).toLocaleTimeString([], {
+                              hour: "numeric",
+                              minute: "2-digit",
+                            })}
+                          </small>
+                        </div>
+                      </div>
+                    )}
+                    <p>{message.content}</p>
+                  </article>
+                );
+              })}
+              <div ref={messagesEndRef} />
+            </section>
+
+            <form className="chat-form" onSubmit={handleSubmit}>
+              <div className="chat-input-wrapper">
+                <textarea
+                  ref={composerRef}
+                  value={content}
+                  onChange={(event) => setContent(event.target.value)}
+                  onKeyDown={handleComposerKeyDown}
+                  placeholder="Type a message..."
+                  disabled={isRewriting}
+                  rows={1}
+                />
+                {isRewriting && <span className="rewriting-indicator">rewriting...</span>}
+                {connectionState === "reconnecting" && (
+                  <span className="reconnect-indicator">trying to reconnect</span>
+                )}
+                {connectionState === "disconnected" && (
+                  <span className="send-error">connection lost</span>
+                )}
+                {sendError && <span className="send-error">{sendError}</span>}
+              </div>
+              <button type="submit" className="primary-button" disabled={isRewriting || connectionState !== "connected"}>
+                Send
+              </button>
+            </form>
           </div>
-          <button type="submit" className="primary-button" disabled={isRewriting}>
-            Send
-          </button>
-        </form>
+        </div>
       </section>
+
+      <section className="settings-dock">
+        <button type="button" className="secondary-button" onClick={() => setIsSettingsOpen(true)}>
+          Settings
+        </button>
+      </section>
+
+      <section className="status-dock">
+        <span className={`connection-pill connection-${connectionState}`}>
+          {connectionState === "connected"
+            ? "connected"
+            : connectionState === "reconnecting"
+              ? `reconnecting${reconnectAttempt > 0 ? ` (${reconnectAttempt})` : ""}`
+              : "offline"}
+        </span>
+      </section>
+
+      {isSettingsOpen && (
+        <div className="settings-overlay" onClick={() => setIsSettingsOpen(false)}>
+          <aside className="settings-drawer" onClick={(event) => event.stopPropagation()}>
+            <div className="settings-header">
+              <h2>Settings</h2>
+              <button type="button" className="secondary-button" onClick={() => setIsSettingsOpen(false)}>
+                Close
+              </button>
+            </div>
+            <div className="settings-body">
+              <p>account: {user.username}</p>
+              <p>
+                status:{" "}
+                {connectionState === "connected"
+                  ? "connected"
+                  : connectionState === "reconnecting"
+                    ? `reconnecting${reconnectAttempt > 0 ? ` (${reconnectAttempt})` : ""}`
+                    : "offline"}
+              </p>
+            </div>
+            <div className="settings-footer">
+              <button type="button" className="secondary-button" onClick={handleLogout}>
+                Log Out
+              </button>
+            </div>
+          </aside>
+        </div>
+      )}
     </main>
   );
 }
