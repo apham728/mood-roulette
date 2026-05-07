@@ -4,7 +4,7 @@ import "./App.css";
 
 // frontend config for the backend URL and the browser storage key
 // persist a logged-in session between page refreshes
-const API_BASE_URL = "http://localhost:3001";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:3001";
 const TOKEN_STORAGE_KEY = "mood-roulette-token";
 
 function App() {
