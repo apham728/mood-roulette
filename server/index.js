@@ -25,7 +25,8 @@ const MAX_MESSAGE_LENGTH = 1000;
 const COOLDOWN_MS = 3000;
 
 const app = express();
-app.use(cors({ origin: "http://localhost:5173" }));
+const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN || "http://localhost:5173";
+app.use(cors({ origin: CLIENT_ORIGIN }));
 app.use(express.json());
 
 // create signed jwt that the frontend stores after signup/login
