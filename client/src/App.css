@@ -1,8 +1,8 @@
 @import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap");
 
 :root {
-  color: #1f1c18;
-  background: #f7efe2;
+  color: #efe9ff;
+  background: #120d1f;
   font-family: "Space Grotesk", sans-serif;
 }
 
@@ -14,6 +14,7 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
+  background: radial-gradient(circle at 18% 10%, #24153f 0%, #120d1f 48%, #0d0a17 100%);
 }
 
 button,
@@ -49,9 +50,9 @@ button {
 .auth-card,
 .chat-panel {
   width: 100%;
-  border: 1px solid rgba(72, 51, 28, 0.14);
-  background: rgba(255, 251, 244, 0.88);
-  box-shadow: 0 18px 60px rgba(79, 56, 28, 0.14);
+  border: 1px solid rgba(140, 107, 215, 0.28);
+  background: rgba(25, 18, 42, 0.88);
+  box-shadow: 0 18px 60px rgba(8, 5, 20, 0.52);
   backdrop-filter: blur(18px);
 }
 
@@ -84,20 +85,20 @@ button {
   text-transform: uppercase;
   letter-spacing: 0.08em;
   font-size: 0.74rem;
-  color: #8a5a26;
+  color: #b998ff;
 }
 
 h1 {
   margin: 0;
   font-size: clamp(2rem, 5vw, 3.5rem);
   line-height: 0.95;
-  color: #2f2116;
+  color: #f3ecff;
 }
 
 .auth-copy {
   margin: 16px 0 0;
   line-height: 1.6;
-  color: #5b4631;
+  color: #c8b6e8;
 }
 
 .auth-switcher {
@@ -108,21 +109,21 @@ h1 {
 .auth-switcher p {
   margin: 0;
   font-size: 0.95rem;
-  color: #5b4631;
+  color: #c8b6e8;
 }
 
 .auth-link {
   border: none;
   background: transparent;
   padding: 0;
-  color: #7d441e;
+  color: #b88cff;
   font-weight: 700;
   text-decoration: underline;
   text-underline-offset: 0.18em;
 }
 
 .auth-link:hover {
-  color: #4f2912;
+  color: #d1b3ff;
 }
 
 .secondary-button,
@@ -146,24 +147,24 @@ h1 {
   display: grid;
   gap: 8px;
   font-size: 0.95rem;
-  color: #5a4734;
+  color: #cbbce8;
 }
 
 input,
 textarea {
   width: 100%;
-  border: 1px solid rgba(85, 59, 35, 0.32);
+  border: 1px solid rgba(136, 106, 209, 0.42);
   border-radius: 12px;
   padding: 14px 16px;
-  background: rgba(255, 255, 255, 0.8);
-  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.04), 0 2px 8px rgba(66, 42, 19, 0.06);
-  color: #2f2116;
+  background: rgba(20, 14, 35, 0.9);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.03), 0 2px 8px rgba(6, 4, 15, 0.4);
+  color: #f3ecff;
 }
 
 input:focus,
 textarea:focus {
-  outline: 2px solid rgba(189, 107, 34, 0.35);
-  border-color: rgba(189, 107, 34, 0.5);
+  outline: 2px solid rgba(170, 121, 255, 0.35);
+  border-color: rgba(170, 121, 255, 0.58);
 }
 
 input:disabled,
@@ -173,8 +174,8 @@ textarea:disabled {
 }
 
 .primary-button {
-  background: linear-gradient(135deg, #332216 0%, #7e4424 100%);
-  color: #fff7ec;
+  background: linear-gradient(135deg, #5b2aa6 0%, #8d4fff 100%);
+  color: #f8f3ff;
   font-weight: 700;
 }
 
@@ -184,8 +185,9 @@ textarea:disabled {
 }
 
 .secondary-button {
-  background: rgba(105, 75, 45, 0.09);
-  color: #5f472f;
+  background: rgba(157, 117, 236, 0.14);
+  color: #d7c2ff;
+  border: 1px solid rgba(144, 108, 218, 0.34);
 }
 
 .settings-dock {
@@ -196,9 +198,8 @@ textarea:disabled {
 }
 
 .settings-dock .secondary-button {
-  border: 1px solid rgba(72, 51, 28, 0.18);
-  background: rgba(255, 248, 238, 0.95);
-  box-shadow: 0 8px 20px rgba(60, 38, 16, 0.16);
+  background: rgba(39, 28, 64, 0.95);
+  box-shadow: 0 8px 20px rgba(7, 4, 18, 0.45);
 }
 
 .status-dock {
@@ -211,7 +212,7 @@ textarea:disabled {
 .settings-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(42, 28, 15, 0.16);
+  background: rgba(10, 7, 19, 0.44);
   z-index: 60;
   display: flex;
   justify-content: flex-end;
@@ -220,9 +221,9 @@ textarea:disabled {
 .settings-drawer {
   width: min(92vw, 360px);
   height: 100vh;
-  background: rgba(255, 251, 244, 0.98);
-  border-left: 1px solid rgba(72, 51, 28, 0.2);
-  box-shadow: -14px 0 28px rgba(48, 33, 20, 0.16);
+  background: rgba(24, 17, 41, 0.98);
+  border-left: 1px solid rgba(146, 112, 223, 0.3);
+  box-shadow: -14px 0 28px rgba(4, 2, 12, 0.55);
   display: grid;
   grid-template-rows: auto 1fr auto;
   padding: 18px;
@@ -234,20 +235,20 @@ textarea:disabled {
   align-items: center;
   gap: 8px;
   padding-bottom: 14px;
-  border-bottom: 1px solid rgba(72, 51, 28, 0.14);
+  border-bottom: 1px solid rgba(146, 112, 223, 0.2);
 }
 
 .settings-header h2 {
   margin: 0;
   font-size: 1.2rem;
-  color: #2f2116;
+  color: #f3ecff;
 }
 
 .settings-body {
   padding: 16px 0;
   display: grid;
   gap: 10px;
-  color: #5f472f;
+  color: #cab7eb;
 }
 
 .settings-body p {
@@ -258,7 +259,7 @@ textarea:disabled {
   display: flex;
   justify-content: flex-end;
   padding-top: 14px;
-  border-top: 1px solid rgba(72, 51, 28, 0.14);
+  border-top: 1px solid rgba(146, 112, 223, 0.2);
 }
 
 .connection-pill {
@@ -271,23 +272,23 @@ textarea:disabled {
 }
 
 .connection-connected {
-  background: rgba(54, 139, 83, 0.2);
-  color: #2f7247;
+  background: rgba(74, 222, 128, 0.2);
+  color: #8ff0b4;
 }
 
 .connection-reconnecting {
-  background: rgba(214, 143, 56, 0.2);
-  color: #8c561c;
+  background: rgba(245, 158, 11, 0.22);
+  color: #ffd18a;
 }
 
 .connection-disconnected {
-  background: rgba(184, 76, 62, 0.2);
-  color: #8e3024;
+  background: rgba(248, 113, 113, 0.24);
+  color: #ffb0b0;
 }
 
 .form-error {
   margin: 0;
-  color: #a12e23;
+  color: #ff8ca4;
   font-size: 0.92rem;
 }
 
@@ -297,7 +298,7 @@ textarea:disabled {
   justify-content: space-between;
   align-items: flex-end;
   gap: 16px;
-  border-bottom: 1px solid rgba(72, 51, 28, 0.3);
+  border-bottom: 1px solid rgba(146, 112, 223, 0.4);
 }
 
 .chat-header-left {
@@ -305,7 +306,6 @@ textarea:disabled {
   flex-direction: column;
   align-items: flex-start;
 }
-
 
 .message-list {
   display: grid;
@@ -319,8 +319,8 @@ textarea:disabled {
   position: relative;
   padding: 14px 18px;
   border-radius: 16px;
-  background: rgba(255, 255, 255, 0.7);
-  border: 1px solid rgba(72, 51, 28, 0.08);
+  background: rgba(41, 29, 68, 0.74);
+  border: 1px solid rgba(142, 108, 221, 0.24);
   display: flex;
   flex-direction: column;
   align-items: stretch;
@@ -341,6 +341,7 @@ textarea:disabled {
   width: 100%;
   line-height: 1.5;
   text-align: left;
+  color: #f4eeff;
 }
 
 .message-card.compact {
@@ -375,17 +376,16 @@ textarea:disabled {
 }
 
 .message-meta-right small {
-  color: #725944;
+  color: #bca6e7;
   white-space: nowrap;
 }
-
 
 .chat-form {
   padding: 10px 28px 18px;
   grid-template-columns: 1fr auto;
   align-items: end;
-  border-top: 1px solid rgba(72, 51, 28, 0.12);
-  background: rgba(255, 248, 238, 0.55);
+  border-top: 1px solid rgba(146, 112, 223, 0.24);
+  background: rgba(21, 15, 36, 0.72);
 }
 
 .chat-input-wrapper {
@@ -404,19 +404,19 @@ textarea:disabled {
 
 .rewriting-indicator {
   font-size: 0.82rem;
-  color: #a89880;
+  color: #baa6df;
   padding-left: 4px;
 }
 
 .reconnect-indicator {
   font-size: 0.82rem;
-  color: #8c561c;
+  color: #ffd18a;
   padding-left: 4px;
 }
 
 .send-error {
   font-size: 0.82rem;
-  color: #a12e23;
+  color: #ff9bb0;
   padding-left: 4px;
 }
 
@@ -425,9 +425,9 @@ textarea:disabled {
   padding: 6px 10px;
   text-align: center;
   font-size: 0.82rem;
-  color: #4c2f14;
-  background: rgba(126, 68, 36, 0.08);
-  border: 1px solid rgba(126, 68, 36, 0.16);
+  color: #e7d9ff;
+  background: rgba(139, 92, 246, 0.18);
+  border: 1px solid rgba(167, 126, 252, 0.34);
   border-radius: 10px;
 }
 
