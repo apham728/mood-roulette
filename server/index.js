@@ -60,7 +60,7 @@ function formatMessage(message) {
   return {
     id: message.id,
     type: "message",
-    sender: message.user?.username || message.sender,
+    sender: message.user?.username || "unknown",
     userId: message.userId || null,
     content: message.content,
     tone: message.tone,
@@ -75,14 +75,6 @@ function createPresenceEvent(content) {
     content,
     createdAt: new Date().toISOString(),
   };
-}
-
-function broadcastOnlineUsers(io, connectedUsers) {
-  const onlineUsers = [...connectedUsers.values()]
-    .map(({ user }) => user.username)
-    .sort((left, right) => left.localeCompare(right));
-
-  io.emit("presence:update", onlineUsers);
 }
 
 // verifies the jwt and loads the matching user from the database
@@ -270,7 +262,6 @@ io.on("connection", async (socket) => {
   });
 
   socket.emit("chat:history", recentMessages.reverse().map(formatMessage));
-  broadcastOnlineUsers(io, connectedUsers);
 
   if (isFirstConnection) {
     io.emit("presence:event", createPresenceEvent(`${socket.user.username} joined the room`));
@@ -319,7 +310,6 @@ io.on("connection", async (socket) => {
 
     const savedMessage = await prisma.message.create({
       data: {
-        sender: socket.user.username,
         userId: socket.user.id,
         content: rewrittenContent,
         tone,
@@ -351,8 +341,7 @@ io.on("connection", async (socket) => {
       });
     }
 
-    broadcastOnlineUsers(io, connectedUsers);
-    console.log("User disconnected:", socket.id);
+      console.log("User disconnected:", socket.id);
   });
 });
 

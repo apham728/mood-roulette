@@ -17,7 +17,6 @@ model User {
 
 model Message {
   id        String   @id @default(uuid())
-  sender    String
   userId    String?
   user      User?    @relation(fields: [userId], references: [id])
   content   String
