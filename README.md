@@ -1,9 +1,27 @@
 # Mood Roulette
+> Real-time chat, but emotionally unreliable.
 `Live Demo:` https://mood-roulette-six.vercel.app
 
-A real-time chat app where every message is rewritten in a random tone before delivery.
+Mood Roulette is a real-time chat application where every outgoing message is secretly rewritten by AI into a randomly selected tone before delivery. The sender never sees the tone chosen, they only have their rewritten message landing in the chatroom.
 
-Users type normally, but the app spins the wheel and sends the rewritten result in one of several styles. The sender does not control the final tone.
+---
+
+## About
+
+Mood Roulette is a single shared chat room where users sign up, log in, and send messages. Every message is intercepted by the backend, rewritten by an AI model in one out of many randomly assigned tones, and then broadcasts to all connected users. The original raw message is never stored or shown to anyone. Only the rewritten version is revealed.
+ 
+**The tones:**
+- **Professional** — formal, polished, business-email style
+- **Passive Aggressive** — technically polite, full of subtext
+- **Shakespearean** — early modern English, dramatic, fully committed
+- **Unhinged** — chaotic, high energy, stream-of-consciousness
+
+**Key behaviours:**
+- The sender cannot preview the rewrite before it sends
+- The tone is revealed only after the message is delivered
+- Messages load from history upon joining and display by most recent
+
+---
 
 ## Features
 
@@ -13,8 +31,8 @@ Users type normally, but the app spins the wheel and sends the rewritten result 
 - Presence events (join/leave)
 - Message history persistence (last 100 messages loaded on connect)
 - Message cooldown + message length guardrails
-- Dark UI theme with purple accents
-- Settings drawer with logout + connection status indicators
+
+---
 
 ## Tech Stack
 
@@ -28,84 +46,238 @@ Users type normally, but the app spins the wheel and sends the rewritten result 
 - Node.js + Express
 - Socket.io
 - Prisma
+- PostgreSQL
 
-### Database
+---
 
-- Postgresql
+## Usage
+ 
+1. Create an account on the signup screen
+2. Enter the shared chat room
+3. Type a message and press Send or hit Enter
+4. Watch as your message gets tone-rolled by the server and delivered in a completely different voice
 
-## Project Structure
+Sessions persist across page refreshes via JWT stored in localStorage. The last 100 messages are loaded on connect so you can catch up on the room history.
+ 
+---
 
-mood-roulette/
-  client/                  # react + vite frontend
-  server/                  # express + socket.io backend
-    prisma/
-      schema.prisma
-      migrations/
+## Installation
+> MacOS  
+ 
+### Pre-Requisites
 
-## Local Development
+- [Homebrew](https://brew.sh/) — package manager for macOS
+- [Node.js](https://nodejs.org/) v18 or higher
+- [PostgreSQL](https://www.postgresql.org/) running locally
+- An [OpenRouter](https://openrouter.ai/) account and API key for AI rewriting
+- npm (comes with Node.js)
 
-### 1) Install dependencies
+### 1. Install Homebrew (if you don't have it)
+ 
+Open Terminal and run:
+ 
+```bash
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+```
+ 
+### 2. Install Node.js
+ 
+```bash
+brew install node
+```
+ 
+Verify the installation:
+ 
+```bash
+node --version && npm --version
+```
+ 
+### 3. Install PostgreSQL
+ 
+```bash
+brew install postgresql@16 && brew services start postgresql@16
+```
+ 
+Verify PostgreSQL is running:
+ 
+```bash
+brew services list
+```
+ 
+You should see `postgresql@16` with a status of `started`.
+ 
+### 4. Create the database
+ 
+```bash
+createdb mood_roulette
+```
+ 
+### 5. Clone the repository
+ 
+```bash
+git clone https://github.com/apham728/mood-roulette.git
+cd mood-roulette
+```
+ 
+### 6. Install server dependencies
+ 
+```bash
+cd server && npm install
+```
+ 
+This installs all backend dependencies including Express, Socket.IO, bcryptjs, jsonwebtoken, and the Prisma CLI.
+ 
+### 7. Install client dependencies
+ 
+```bash
+cd ../client && npm install
+```
+### 8. Configure server environment variables
+ 
+Create a `.env` file inside the `server/` directory:
+ 
+```bash
+touch ../server/.env
+```
+ 
+Open it in your editor and add the following:
+ 
+```env
+DATABASE_URL="postgresql://YOUR_MAC_USERNAME@localhost:5432/mood_roulette"
+JWT_SECRET="replace-with-a-long-random-string"
+OPENROUTER_API_KEY="your-openrouter-api-key"
+```
+ 
+Replace `YOUR_MAC_USERNAME` with your macOS username. If you're unsure what it is, run:
+ 
+```bash
+whoami
+```
+ 
+### 9. Set up Prisma
+ 
+From inside the `server/` directory, first install Prisma:
+ 
+```bash
+npm install prisma@6 @prisma/client@6
+```
+ 
+Generate the Prisma client — this reads your schema and creates the database access layer inside `node_modules`:
+ 
+```bash
+npx prisma generate
+```
+ 
+Then run migrations to create all the required tables in your local `mood_roulette` database:
+ 
+```bash
+npx prisma migrate dev
+```
+ 
+When prompted for a migration name, you can enter something like `init`.
+ 
+You should see confirmation that the `users` and `messages` tables have been created successfully.
 
-`cd client && npm install`  
-`cd ../server && npm install`
+---
 
-### 2) Configure server env
+## Commands
+ 
+### Start the backend (from `/server`)
+ 
+```bash
+npm run dev
+```
+ 
+The server runs on `http://localhost:3001`
+ 
+### Start the frontend (from `/client`)
+ 
+```bash
+npm run dev
+```
+ 
+The client runs on `http://localhost:5173`
+ 
+Both must be running at the same time for the app to work.
+ 
+---
 
-create `server/.env`:
+## File Structure
 
-`DATABASE_URL=postgresql://...`  
-`JWT_SECRET=your-long-random-secret`  
-`OPENROUTER_API_KEY=your_openrouter_key`  
-`CLIENT_ORIGIN=http://localhost:5173`
+```.
+├── client
+│   └── src
+│       ├── App.jsx
+│       └── App.css
+├── server
+│   ├─- prisma
+│   │   └── schema.prisma
+│   ├─- index.js
+│   └── .env
+│   
+└── README.md
+```
+ 
+| No | File / Folder | Details |
+|----|---------------|---------|
+| 1 | `client/` | React frontend built with Vite |
+| 2 | `client/src/App.jsx` | Main application component: auth screens, chat UI, socket logic |
+| 3 | `client/src/App.css` | All frontend styles |
+| 4 | `server/` | Node.js + Express backend |
+| 5 | `server/index.js` | Express routes, Socket.IO server, AI rewrite pipeline |
+| 6 | `server/prisma/schema.prisma` | Database schema for users and messages |
+| 7 | `server/.env` | Environment variables (not committed) |
+| 8 | `.gitignore` | Ignores node_modules, .env files, and build output |
+ 
+---
 
-### 3) Run prisma
+## Build
+ 
+### Frontend production build
+ 
+```bash
+cd client
+npm run build
+```
+ 
+Output is written to `client/dist/`. This folder can be served statically or deployed to Vercel.
+ 
+### Backend
+ 
+The backend runs directly with Node.js and does not require a separate build step.
 
-`cd server`  
-`npx prisma generate`  
-`npx prisma migrate dev`  
-
-### 4) Start app
-
-in one terminal:  
-`cd server`
-`npm run dev`  
-
-in another terminal:  
-`cd client`
-`npm run dev`
-
-frontend: http://localhost:5173  
-backend: http://localhost:3001
-
-## Environment Variables
-
-### server (`server/.env`)
-
-- `DATABASE_URL` - postgres connection string
-- `JWT_SECRET` - token signing secret
-- `OPENROUTER_API_KEY` - ai provider key
-- `CLIENT_ORIGIN` - allow frontend to utilize sockets
-
-### frontend (vercel env)
-
-- `VITE_API_BASE_URL` - backend public url (example: https://mood-roulette.onrender.com)
+---
 
 ## Deployment
 
-### backend (render)
+### Backend — Render
+ 
+1. Go to [render.com](https://render.com) and create a new web service
+2. Connect your GitHub repository
+3. Set the **Root Directory** to `server`
+4. Set the **Start Command** to `npx prisma migrate deploy && node index.js`
+5. Set the **Build Command** to `npm ci && npx prisma generate`
+6. Add the following environment variables in the dashboard:
+```env
+DATABASE_URL = your-production-postgres-url
+JWT_SECRET = your-production-jwt-secret
+OPENROUTER_API_KEY = your-openrouter-api-key
+CLIENT_ORIGIN = frontend-link
+```
+7. Go back to [render.com](https://render.com) and create a PostgreSQL service
+2. Give any name and database name as fit
+3. Copy the **Internal Database URL** and enter that for `DATABASE_URL` environment variable in web service
 
-- root directory: `server`
-- build command: `npm ci && npx prisma generate`
-- start command: `npx prisma migrate deploy && node index.js`
-- set all server env vars in Render dashboard
-
-### frontend (vercel)
-
-- root directory: `client`
-- framework: `vite`
-- build command: `npm run build`
-- output directory: `dist`
-- set `VITE_API_BASE_URL` to your Render backend url
+### Frontend — Vercel
+ 
+1. Push your repository to GitHub
+2. Go to [vercel.com](https://vercel.com) and import the repository
+3. Set the **Root Directory** to `client`
+4. Set the **Build Command** to `npm run build`
+5. Set the **Output Directory** to `dist`
+6. Add `VITE_API_BASE_URL` to environment variable and put the link to your backend
+7. Vercel will detect Vite automatically — no build configuration needed
+8. Deploy
 
 ## Production Issues I Faced 
 
