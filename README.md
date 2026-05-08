@@ -304,4 +304,4 @@ VITE_API_BASE_URL = your-backend-link
 - Handling live connection lifecycle states (connected, reconnecting, disconnected) and reflecting those states in the UI
 - Adding reliability and safety controls such as message length limits and per-user cooldowns to prevent API abuse 
 - Debugging cross environment deployment issues including cors origin mismatches, socket reconnect loops, prisma migration gaps, and invalid environment variables
-- Deploying backend and database (Render) and frontend (Vercel), including environment configuration and migration strategy for production<img width="903" height="488" alt="Gemini_Generated_Image_lzdoudlzdoudlzdo" src="https://github.com/user-attachments/assets/723f7ddd-8b65-4a4a-be2d-ba3ec4d97bc5" />
+- Deploying backend and database (Render) and frontend (Vercel), including environment configuration and migration strategy for production
