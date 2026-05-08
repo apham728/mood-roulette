@@ -1,3 +1,5 @@
+<img width="680" height="220" alt="mood_roulette_logo" src="https://github.com/user-attachments/assets/a6105275-cc67-45fd-a6b0-25d588cdc1dd" /><svg width="100%" viewBox="0 0 680 220" role="img" xmlns="http://www.w3.org/2000/svg" style=""><defs><mask id="imagine-text-gaps-jytmxz" maskUnits="userSpaceOnUse"><rect x="0" y="0" width="680" height="220" fill="white"/><rect x="-16.25" y="-15.765625" width="32.5" height="31.53125" fill="black" rx="2"/><rect x="-16.25" y="-15.765625" width="32.5" height="31.53125" fill="black" rx="2"/><rect x="-16.25" y="-15.765625" width="32.5" height="31.53125" fill="black" rx="2"/><rect x="-16.25" y="-15.765625" width="32.5" height="31.53125" fill="black" rx="2"/><rect x="-16.25" y="-15.765625" width="32.5" height="31.53125" fill="black" rx="2"/><rect x="-16.25" y="-15.765625" width="32.5" height="31.53125" fill="black" rx="2"/><rect x="221" y="44.953125" width="146.609375" height="64.015625" fill="black" rx="2"/><rect x="221" y="104.953125" width="216" height="64.015625" fill="black" rx="2"/><rect x="224" y="165.171875" width="299.703125" height="22.515625" fill="black" rx="2"/></mask></defs>
+
 # Mood Roulette
 > Real-time chat, but emotionally unreliable.
 `Live Demo:` https://mood-roulette-six.vercel.app
@@ -275,7 +277,10 @@ CLIENT_ORIGIN = frontend-link
 3. Set the **Root Directory** to `client`
 4. Set the **Build Command** to `npm run build`
 5. Set the **Output Directory** to `dist`
-6. Add `VITE_API_BASE_URL` to environment variable and put the link to your backend
+6. Add the following environment variables in the dashboard:
+```env
+VITE_API_BASE_URL = your-backend-link
+```
 7. Vercel will detect Vite automatically — no build configuration needed
 8. Deploy
 
@@ -299,4 +304,4 @@ CLIENT_ORIGIN = frontend-link
 - Handling live connection lifecycle states (connected, reconnecting, disconnected) and reflecting those states in the UI
 - Adding reliability and safety controls such as message length limits and per-user cooldowns to prevent API abuse 
 - Debugging cross environment deployment issues including cors origin mismatches, socket reconnect loops, prisma migration gaps, and invalid environment variables
-- Deploying backend and database (Render) and frontend (Vercel), including environment configuration and migration strategy for production
+- Deploying backend and database (Render) and frontend (Vercel), including environment configuration and migration strategy for production<img width="903" height="488" alt="Gemini_Generated_Image_lzdoudlzdoudlzdo" src="https://github.com/user-attachments/assets/723f7ddd-8b65-4a4a-be2d-ba3ec4d97bc5" />
