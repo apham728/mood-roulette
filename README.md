@@ -233,57 +233,6 @@ Both must be running at the same time for the app to work.
  
 ---
 
-## Build
- 
-### Frontend production build
- 
-```bash
-cd client
-npm run build
-```
- 
-Output is written to `client/dist/`. This folder can be served statically or deployed to Vercel.
- 
-### Backend
- 
-The backend runs directly with Node.js and does not require a separate build step.
-
----
-
-## Deployment
-
-### Backend — Render
- 
-1. Go to [render.com](https://render.com) and create a new web service
-2. Connect your GitHub repository
-3. Set the **Root Directory** to `server`
-4. Set the **Start Command** to `npx prisma migrate deploy && node index.js`
-5. Set the **Build Command** to `npm ci && npx prisma generate`
-6. Add the following environment variables in the dashboard:
-```env
-DATABASE_URL = your-production-postgres-url
-JWT_SECRET = your-production-jwt-secret
-OPENROUTER_API_KEY = your-openrouter-api-key
-CLIENT_ORIGIN = frontend-link
-```
-7. Go back to [render.com](https://render.com) and create a PostgreSQL service
-2. Give any name and database name as fit
-3. Copy the **Internal Database URL** and enter that for `DATABASE_URL` environment variable in web service
-
-### Frontend — Vercel
- 
-1. Push your repository to GitHub
-2. Go to [vercel.com](https://vercel.com) and import the repository
-3. Set the **Root Directory** to `client`
-4. Set the **Build Command** to `npm run build`
-5. Set the **Output Directory** to `dist`
-6. Add the following environment variables in the dashboard:
-```env
-VITE_API_BASE_URL = your-backend-link
-```
-7. Vercel will detect Vite automatically — no build configuration needed
-8. Deploy
-
 ## Production Issues I Faced 
 
 - login worked, but socket stuck on reconnecting  
@@ -298,10 +247,8 @@ VITE_API_BASE_URL = your-backend-link
 - Designing a full-stack architecture where React handles UI state, Express handles HTTP auth routes, Socket.io handles real-time chat events, and Prisma/Postgresql handles persistence
 - Implementing JWT-based authentication so that only authenticated users can join chat
 - Managing client-side session restoration with local storage plus `/auth/me` validation to prevent stale or invalid sessions
-- Building a real-time message pipeline where raw input is rewritten by ai, stored in the database, and broadcast back to all connected clients
+- Building a real-time message pipeline where raw input is rewritten by AI, stored in the database, and broadcast back to all connected clients
 - Modeling relational data with prisma (users and messages)
 - Loading chat history (last 100 messages) in reverse ordered queries and rendering oldest-to-newest for readable conversation flow
-- Handling live connection lifecycle states (connected, reconnecting, disconnected) and reflecting those states in the UI
 - Adding reliability and safety controls such as message length limits and per-user cooldowns to prevent API abuse 
-- Debugging cross environment deployment issues including cors origin mismatches, socket reconnect loops, prisma migration gaps, and invalid environment variables
 - Deploying backend and database (Render) and frontend (Vercel), including environment configuration and migration strategy for production
