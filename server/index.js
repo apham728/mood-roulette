@@ -105,7 +105,7 @@ async function requireAuth(req, res, next) {
 // the raw content is only used here and is never stored or returned to any client
 async function rewriteMessage(content, tone) {
   const response = await openai.chat.completions.create({
-    model: "nvidia/nemotron-3-nano-30b-a3b:free",
+    model: "nvidia/nemotron-3-super-120b-a12b:free",
     messages: [
       {
         role: "system",
