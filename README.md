@@ -1,3 +1,5 @@
+<img width="680" height="220" alt="mood_roulette_logo" src="https://github.com/user-attachments/assets/a6105275-cc67-45fd-a6b0-25d588cdc1dd" /><svg width="100%" viewBox="0 0 680 220" role="img" xmlns="http://www.w3.org/2000/svg" style=""><defs><mask id="imagine-text-gaps-jytmxz" maskUnits="userSpaceOnUse"><rect x="0" y="0" width="680" height="220" fill="white"/><rect x="-16.25" y="-15.765625" width="32.5" height="31.53125" fill="black" rx="2"/><rect x="-16.25" y="-15.765625" width="32.5" height="31.53125" fill="black" rx="2"/><rect x="-16.25" y="-15.765625" width="32.5" height="31.53125" fill="black" rx="2"/><rect x="-16.25" y="-15.765625" width="32.5" height="31.53125" fill="black" rx="2"/><rect x="-16.25" y="-15.765625" width="32.5" height="31.53125" fill="black" rx="2"/><rect x="-16.25" y="-15.765625" width="32.5" height="31.53125" fill="black" rx="2"/><rect x="221" y="44.953125" width="146.609375" height="64.015625" fill="black" rx="2"/><rect x="221" y="104.953125" width="216" height="64.015625" fill="black" rx="2"/><rect x="224" y="165.171875" width="299.703125" height="22.515625" fill="black" rx="2"/></mask></defs>
+
 # Mood Roulette
 > Real-time chat, but emotionally unreliable.
 `Live Demo:` https://mood-roulette-six.vercel.app
@@ -231,6 +233,7 @@ Both must be running at the same time for the app to work.
  
 ---
 
+
 ## Build
  
 ### Frontend production build
@@ -282,6 +285,7 @@ VITE_API_BASE_URL = your-backend-link
 7. Vercel will detect Vite automatically — no build configuration needed
 8. Deploy
 
+
 ## Production Issues I Faced 
 
 - login worked, but socket stuck on reconnecting  
@@ -296,10 +300,8 @@ VITE_API_BASE_URL = your-backend-link
 - Designing a full-stack architecture where React handles UI state, Express handles HTTP auth routes, Socket.io handles real-time chat events, and Prisma/Postgresql handles persistence
 - Implementing JWT-based authentication so that only authenticated users can join chat
 - Managing client-side session restoration with local storage plus `/auth/me` validation to prevent stale or invalid sessions
-- Building a real-time message pipeline where raw input is rewritten by ai, stored in the database, and broadcast back to all connected clients
+- Building a real-time message pipeline where raw input is rewritten by AI, stored in the database, and broadcast back to all connected clients
 - Modeling relational data with prisma (users and messages)
 - Loading chat history (last 100 messages) in reverse ordered queries and rendering oldest-to-newest for readable conversation flow
-- Handling live connection lifecycle states (connected, reconnecting, disconnected) and reflecting those states in the UI
 - Adding reliability and safety controls such as message length limits and per-user cooldowns to prevent API abuse 
-- Debugging cross environment deployment issues including cors origin mismatches, socket reconnect loops, prisma migration gaps, and invalid environment variables
 - Deploying backend and database (Render) and frontend (Vercel), including environment configuration and migration strategy for production
