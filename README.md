@@ -275,7 +275,10 @@ CLIENT_ORIGIN = frontend-link
 3. Set the **Root Directory** to `client`
 4. Set the **Build Command** to `npm run build`
 5. Set the **Output Directory** to `dist`
-6. Add `VITE_API_BASE_URL` to environment variable and put the link to your backend
+6. Add the following environment variables in the dashboard:
+```env
+VITE_API_BASE_URL = your-backend-link
+```
 7. Vercel will detect Vite automatically — no build configuration needed
 8. Deploy
 
