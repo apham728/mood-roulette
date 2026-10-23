@@ -24,6 +24,20 @@ const JWT_SECRET = process.env.JWT_SECRET || "change-this-in-production";
 const MAX_MESSAGE_LENGTH = 1000;
 const COOLDOWN_MS = 3000;
 
+// models are tried in order until one succeeds, because free models on
+// openrouter come and go. override on render with OPENROUTER_MODELS, a
+// comma-separated list of slugs
+const DEFAULT_MODELS = [
+  "nvidia/nemotron-3-super-120b-a12b:free",
+  "nvidia/nemotron-3.5-lightning:free",
+  "thinkingmachines/inkling-small:free",
+  "liquid/lfm-2.5-2.6b:free",
+];
+const MODELS = (process.env.OPENROUTER_MODELS || DEFAULT_MODELS.join(","))
+  .split(",")
+  .map((slug) => slug.trim())
+  .filter(Boolean);
+
 const app = express();
 const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN || "http://localhost:5173";
 app.use(cors({ origin: CLIENT_ORIGIN }));
@@ -105,7 +119,7 @@ async function requireAuth(req, res, next) {
 // the raw content is only used here and is never stored or returned to any client
 async function rewriteMessage(content, tone) {
   const response = await openai.chat.completions.create({
-    model: "nvidia/nemotron-3-super-120b-a12b:free",
+    model: "nvidia/nemotron-3-ultra-550b-a55b:free",
     messages: [
       {
         role: "system",
